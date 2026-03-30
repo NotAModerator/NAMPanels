@@ -24,7 +24,7 @@ This file controls what elements should exist on which page. In this file, certa
     - `func`: Function to callback to.
 
 Example of `panels.json`'s structure:
-```lua
+```json
 {
 	"Page1": {
 		"Button": {

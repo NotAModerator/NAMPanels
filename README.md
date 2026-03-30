@@ -13,7 +13,7 @@ Custom UI Script for Figura that paints over the ActionWheel.
 
 ## panels.json
 This file controls what elements should exist on which page. In this file, certain element types can be defined:
-  - No type: Treated as a link to another page, and will use the `button` type.
+  - No type: Treated as a link to another page, and will use the `button` type. (Applies to components that nest elements.)
   - `button`: Simplest of the bunch; will trigger a callback once clicked.
     - `func`: Function to callback to.
   - `slider`: Slider bar that allows an input between a minimum and maximum range.

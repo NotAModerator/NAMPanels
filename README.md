@@ -6,7 +6,7 @@ Custom UI Script for Figura that paints over the ActionWheel.
 - 1: Download `nampanels.lua` from this repository.
 - 2: Add script to your main avatar's folder or in `./figura/data`, making sure to link to the script somewhere in your autoScripts. (In your autoScript, you can perform `loadstring(file:readString("./nampanels.lua"))` instead of `require`.)
 - 3: In your main script, add `local nampanels = require("nampanels")`. (Recommended to include at the beginning of your script.)
-- 4: Add `panels.json` somewhere the script has read access.
+- 4: Add `panels.json` somewhere the script has read access. (currently hardcoded to `./host/config/panels.json`)
 - 5: Enjoy!
 
 # Documentation

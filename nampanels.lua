@@ -1,173 +1,101 @@
---NAMPanels v0.0.0
-local api, list, actions, objects = {}, parseJson(file:readString("./host/config/panels.json")), {}, {}
+--nampanels v0.1
 local key, f3 = keybinds:fromVanilla("figura.config.action_wheel_button"), keybinds:newKeybind("f3", "key.keyboard.f3")
-models:newPart("gui"):setParentType("Gui"):visible(false)
+local api, elems, objects, cfg, actions = {}, {}, {}, {path = nil}, {}
+models:newPart("gui", "Gui"):visible(false):light(15)
 
---element types
-local function createElement(attr, parent)
-	local obj = (parent or models.gui):newPart(client:intUUIDToString(client:generateUUID()))
-	table.insert(objects, {obj = obj, attr = attr})
-	return obj, attr
+local function cloneTable(tbl)
+	local clone = {}
+	for k, v in pairs(tbl) do clone[k] = v end
+	return clone
 end
 
-local function getRenderTaskDescendants(part, tbl)
-	local _tbl = tbl or {}
-	for k, v in pairs(part:getTask()) do _tbl[k] = v end
-	for _, v in pairs(part:getChildren()) do getRenderTaskDescendants(v, _tbl) end
-	return _tbl
-end
-
-local function createButton(x, y, w, h, text, func)
-	local elem, _attr = createElement({
-		scale = vec(w, h),
-		region = vec(200, 20),
-		offset = {40, 60},
-		action = func,
-		func = function(action, coords, obj, attr, hover, ren)
-			ren.btn:region(attr.region):size(attr.scale)
-				:uvPixels(0, attr.offset[hover and 2 or 1])
-			ren.text:pos(attr.scale.x * -1 / 2, (attr.scale.y * -1 / 2) + client:getTextHeight(attr.text) / 2)
-			if hover and action == 0 then 
-				attr.action()
-			end
-		end
-	})
-	elem:pos(x * -1, y * -1):newSprite("btn"):setTexture("textures/gui/slider.png", 256, 256)
-	elem:newText("text"):setText(text):alignment("CENTER")
-	return _attr
-end
-
-local function createSlider(x, y, w, h, text, func, range)
-	local elem, _attr = createElement({
-		value = 0,
-		scale = vec(w, h),
-		region = vec(200, 20),
-		offset = {40, 60},
-		bounds = vec(range[1], range[2]),
-		action = func,
-		text = text,
-		func = function(action, coords, obj, attr, hover, ren)
-			ren.sliderBg:region(attr.region)
-				:size(attr.scale)
-			ren.btn:region(attr.region)
-				:size(attr.scale.x / (attr.bounds.y - attr.bounds.x), attr.scale.y)
-				:uvPixels(0, attr.offset[hover and 2 or 1])
-			ren.text:pos(attr.scale.x * -1 / 2, (attr.scale.y * -1 / 2) + client:getTextHeight(attr.text) / 2)
-				:setText(attr.text .. " (" .. math.round(attr.value) .. ")")
-			if hover and action == 1 then
-				local btnPos = math.clamp(coords.x - ren.btn:getSize().x / -2, attr.scale.x * -1 + ren.btn:getSize().x, 0)
-				if attr.value ~= math.map(btnPos, 0, attr.scale.x * -1 + ren.btn:getSize().x, attr.bounds.x, attr.bounds.y) then
-					attr.value = math.map(btnPos, 0, attr.scale.x * -1 + ren.btn:getSize().x, attr.bounds.x, attr.bounds.y)
-					attr.action(attr.value)
-				end
-				ren.btn:pos(btnPos, 0)
-			end
-		end
-	})
-	elem:pos(x * -1, y * -1):newSprite("sliderBg"):setTexture("textures/gui/slider.png", 256, 256)
-	elem:newSprite("btn"):setTexture("textures/gui/slider.png", 256, 256)
-	elem:newText("text"):alignment("CENTER")
-	return _attr
-end
-
-local function createRadio(x, y, w, h, text, func, _, options)
-	local elem, _attr = createElement({
-		value = 0,
-		options = options,
-		scale = vec(w, #options * h + 20),
-		action = func,
-		func = function(action, coords, obj, attr, hover, ren)
-			ren.radioBg:size(attr.scale)
-			ren.title:pos(attr.scale.x * -1 / 2, -10)
-		end
-	})
-	elem:pos(x * -1, y * -1):newSprite("radioBg"):setTexture("textures/gui/advancements/widgets.png", 256, 256)
-		:region(24, 24)
-		:uvPixels(1, 155)
-	elem:newText("title"):alignment("CENTER"):text(text)
-	for i, v in ipairs(options) do
-		local obj, option = createElement({
-			value = v,
-			scale = vec(_attr.scale.x, 20),
-			region = vec(200, 20),
-			offset = {40, 60},
-			func = function(action, coords, obj, attr, hover, ren)
-				ren.btn:region(attr.region):size(attr.scale)
-					:uvPixels(0, attr.offset[hover and 2 or 1])
-				if hover and action == 0 then
-					_attr.action(attr.value)
-				end
-			end
-		}, elem)
-		obj:pos(0, i * -20)
-		obj:newSprite("btn"):setTexture("textures/gui/slider.png", 256, 256)
-		obj:newText("text"):alignment("CENTER"):text(option.value)
-			:pos(option.scale.x * -1 / 2, (option.scale.y * -1 / 2) + client:getTextHeight(option.value) / 2)
+local function getAscendants(part, tbl)
+	local tbl = tbl or {}
+	if part:getParent() then
+		tbl[part:getParent():getName()] = part:getParent()
+		getAscendants(part:getParent(), tbl)
 	end
-	return _attr
+	return tbl
 end
 
-local previousPage, currentPage = nil, false
-local function createPage(page)
-	previousPage = currentPage
-	local offset, presetTbl = 0, {
-		button = createButton,
-		slider = createSlider,
-		radio = createRadio
+local function getDescendants(obj, tbl)
+	local tbl = tbl or {}
+	for k, v in pairs((obj.part or obj):getChildren()) do
+		local chld = objects[v:getName()] or v
+		if chld then
+			if type(chld) == "table" then table.insert(tbl, chld) end
+			if #v:getChildren() > 0 then getDescendants(chld, tbl) end
+		end
+	end
+	return tbl
+end
+
+local function addObject(name, obj, parent)
+	local uuid = tostring(client:generateUUID())
+	local part = (parent or models.gui):newPart(uuid)
+	objects[uuid] = cloneTable(elems[obj.type].attr)
+	objects[uuid].dat = {
+		name = name, 
+		obj = obj, 
+		func = actions[obj.func],
+		type = obj.type
 	}
-	for i, v in ipairs(objects) do
-		v.obj:remove()
-		objects[i] = nil
-	end
-	for k, v in pairs(page) do
-		local width, elem = client:getTextWidth(k) + 40, nil
-		if presetTbl[v.type] then
-			elem = presetTbl[v.type](0, offset, width, 20, k, actions[v.func], v.range, v.options)
-		else
-			elem = createButton(0, offset, width, 20, k, function() currentPage = k end)
+	objects[uuid].init(part, objects[uuid])
+	if elems[obj.type].nestable then
+		for k, v in pairs(obj) do 
+			if type(v) ~= "string" then addObject(k, v, objects[uuid].anchor or objects[uuid].part) end
 		end
-		offset = offset + elem.scale.y
 	end
-	presetTbl["button"](0, offset, 20, 20, ":cancel:", function() currentPage = nil end)
 end
 
---api
-function api.newAction(name, func)
-	actions[name] = func
+function api.config(path)
+	if cfg.path == path then return end
+	cfg, objects = {path = path, json = {parseJson(file:readString(path))}}, {}
+	for _, v in pairs(models.gui:getChildren()) do v:remove() end
+	for k, v in pairs(cfg.json) do addObject(k, v, nil) end
 end
 
---controls
+function api.addElementType(name, attr, nestable) elems[name] = {attr = attr, nestable = nestable} end
+
+function api.newAction(name, func) actions[name] = func end
+
 key.press = function()
 	if f3:isPressed() then return false end
 	models.gui:visible(true)
 	host:setUnlockCursor(true)
+	renderer:setRenderCrosshair(false)
 	return true
 end
 
 key.release = function()
 	models.gui:visible(false)
 	host:setUnlockCursor(false)
+	renderer:setRenderCrosshair(true)
 end
 
-local clickState = nil
+local clickState, scroll = nil, 0
 function events.mouse_press(_, action)
 	if models.gui:getVisible() then clickState = action end
 end
 
---main render loop
-function events.render()
-	local coords = client:getMousePos() / 2
-	if previousPage ~= currentPage then
-		previousPage = currentPage
-		createPage(list[currentPage] or list) 
+function events.mouse_scroll(delta)
+	if models.gui:getVisible() then 
+		scroll = delta 
+		return true
 	end
+end
+
+function events.render()
+	if not models.gui:getVisible() then return end
+	local coords = client:getMousePos() / client:getGuiScale()
 	for _, v in pairs(objects) do
-		local parentPos = v.obj:getParent():getPos()
-		local pos = vec(v.obj:getPos().x + parentPos.x, v.obj:getPos().y + parentPos.y) * -1
-		local isHovering = coords > pos and coords < pos + v.attr.scale
-		v.attr.func(clickState, coords * -1, v.obj, v.attr, isHovering, getRenderTaskDescendants(v.obj))
+		local pos = vec(0, 0, 0)
+		local descend = getDescendants(v)
+		for _, d in pairs(getAscendants(v.part)) do pos = pos - d:getPos() end
+		v.func(v, pos.xy - v.part:getPos().xy, descend, coords, clickState, scroll)
 	end
 	if clickState and clickState < 1 then clickState = nil end
+	scroll = 0
 end
 
 return api

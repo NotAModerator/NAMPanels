@@ -1,57 +1,50 @@
-# NAMPanels v0.0.0
+# NAMPanels v0.1.0
 Custom UI Script for Figura that paints over the ActionWheel.
 
 # Installation
 
-- 1: Download `nampanels.lua` from this repository.
-- 2: Add script to your main avatar's folder or in `./figura/data`, making sure to link to the script somewhere in your autoScripts. (In your autoScript, you can perform `loadstring(file:readString("./nampanels.lua"))` instead of `require`.)
-- 3: In your main script, add `local nampanels = require("nampanels")`. (Recommended to include at the beginning of your script.)
-- 4: Add `panels.json` somewhere the script has read access. (currently hardcoded to `./host/config/panels.json`)
-- 5: Enjoy!
+- 1: Download `nampanels.lua` from this repository, and add it to your main avatar's folder.
+- 2: In your main script, add `local nampanels = require("nampanels")`. (Recommended to include at the beginning of your script.)
+- 3: Add `panels.json` somewhere the script has read access. Be sure to call `api.config` with the path that the script should read panel data from.
+- 4: From here, you can program in your own element types and structuring with relative ease.
+- 5: Once programmed, use your actionwheel key to enable the UI.
+- 6: Enjoy!
 
 # Documentation
 
 ## panels.json
-This file controls what elements should exist on which page. In this file, certain element types can be defined:
-  - No type: Treated as a link to another page, and will use the `button` type. (Applies to components that nest elements.)
-  - `button`: Simplest of the bunch; will trigger a callback once clicked.
-    - `func`: Function to callback to.
-  - `slider`: Slider bar that allows an input between a minimum and maximum range.
-    - `range`: Array that specifies the range the slider can output.
-    - `func`: Function to callback to.
-  - `radio`: Similar to `button`, but provides multiple options for the same function.
-    - `options`: Array with all options this element has available.
-    - `func`: Function to callback to.
+This file handles the data that element types should use once loaded. For any base element, such as a `div` or `body` (HTML5 terminology, but you can use any name), you can set the `type` property of an array to it and nest other elements inside it. This only works if the element is set to allow nesting; explained in api documentation.
 
-Example of `panels.json`'s structure:
-```json
+Example:
+```
 {
-	"Page1": {
-		"Button": {
-			"type": "button",
-			"func": "myFunction"
-		},
-		"Slider": {
-			"type": "slider",
-			"func": "mySliderFunction",
-			"range": [-2, 10]
-		}
-	},
-	"Page2": {
-		"Radio": {
-			"type": "radio",
-			"func": "myRadioFunction",
-			"options": [
-				1,
-				2,
-				3
-			]
-		}
+	"Body": {
+		"a": {...},
+		"b": {...},
+		"type": "div"
 	}
 }
 ```
 
+When loaded, elements can read from these arrays to allow for things like toggles or variable inputs; explained in api documentation.
+
 ## api.newAction(name, func)
 Creates a function that can be linked to in `panels.json` using the `func` component.
 - `name`: Name of the function.
-- `func`: The function itself. Accepts a single argument `value` that varies depending on the element type.
+- `func`: The function itself. Accepts any arguments based on what is given in the element type.
+
+## api.addElementType(name, attr, nestble)
+Creates a new element type that the script can refer to when reading `panels.json`.
+- `name`: Name of the element.
+- `attr`: Table consisting of attributes that make up the element
+  - `init`: Function to initialize things such as sprites/graphics or certain values. Accepts parameters `part`, the modelPart that the element is anchored to, and `vars`, a table of the element itself.
+  - `func`: Function that runs every frame while this element is loaded.
+    - `vars`: Element table.
+    - `pos`: True position of the element, accounting for the elements it's nested in.
+    - `descend`: All descendants of the element, if the `nestable` argument is true.
+    - `coords`: Position of the cursor.
+    - `clickState`: Click state of the mouse, deriving from `events.mouse_press`
+    - `scroll`: Scroll delta of the mouse, deriving from `events.mouse_scroll`
+
+## api.config(path)
+- `path`: Directory pointing to `panels.json` for the script to load data from.

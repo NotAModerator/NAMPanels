@@ -10,6 +10,9 @@ Custom UI Script for Figura that paints over the ActionWheel.
 - 5: Once programmed, use your actionwheel key to enable the UI.
 - 6: Enjoy!
 
+> [!NOTE]
+> This script is **advanced** and not designed with Figura beginners in mind. I will not read issues or posts that use this script for basic actionwheel utilities, but I am open to bug reports and PRs.
+
 # Documentation
 
 ## panels.json
